@@ -20,10 +20,18 @@
   (insert command)
   )
 
+(defun command-center-service-isup (service)
+  "Check if SERVICE is up."
+  (if (= (funcall (plist-get service :status)) 0)
+      t
+    nil
+    )
+  )
+
 (defun command-center-insert-service (service)
   "Insert the SERVICE."
   (insert (plist-get service :name))
-  (if (= (funcall (plist-get service :status)) 0)
+  (if (command-center-service-isup service)
       (insert " up\n")
     (insert " down\n"))
   )
@@ -45,13 +53,38 @@
   (- (line-number-at-pos) 2)
   )
 
+(defun command-center-get-service-index ()
+  "Get the index of the service at point."
+  (- (line-number-at-pos) (+ 3 (length command-center-commands)))
+  )
+
 (defun command-center-run-command ()
-  "Refresh command center mode."
+  "Execute command or run/stop service."
   (interactive)
   (let ((inhibit-read-only t))
-    (let ((name (car (nth (command-center-get-command-index) command-center-commands))))
-      (message (concat "runing " name))
-      (funcall (cdr (assoc name command-center-commands)))
+    (let ((command-index (command-center-get-command-index)))
+      (if (and (>= command-index 0) (< command-index (length command-center-commands)))
+          (let ((name (car (nth command-index command-center-commands))))
+            (message (concat "running " name))
+            (funcall (cdr (assoc name command-center-commands)))
+            )
+        )
+      )
+    (let ((service-index (command-center-get-service-index)))
+      (if (and (>= service-index 0) (< service-index (length command-center-services)))
+          (let ((service (nth service-index command-center-services)))
+            (if (command-center-service-isup service)
+                (progn
+                  (message (concat "stoping " (plist-get service :name)))
+                  (funcall (plist-get service :stop))
+                  )
+              (progn
+                (message (concat "running " (plist-get service :name)))
+                (funcall (plist-get service :run))
+                )
+              )
+            )
+        )
       )
     )
   )
@@ -76,7 +109,7 @@
     nil
   (setq command-center-services
         '((:name "postgres"
-                 :start (lambda () (start-process "postgres" "*psql*" "c:/Users/prousj/programas/pgsql/bin/pg_ctl.exe" "start" "-D" "c:/Users/prousj/Documents/psql/data/" "-l" "c:/Users/prousj/Documents/psql/archivo_de_registro"))
+                 :run (lambda () (start-process "postgres" "*psql*" "c:/Users/prousj/programas/pgsql/bin/pg_ctl.exe" "start" "-D" "c:/Users/prousj/Documents/psql/data/" "-l" "c:/Users/prousj/Documents/psql/archivo_de_registro"))
                  :stop (lambda () (start-process "postgres" "*psql*" "c:/Users/prousj/programas/pgsql/bin/pg_ctl.exe" "stop" "-D" "c:/Users/prousj/Documents/psql/data/"))
                  :status (lambda () (call-process "c:/Users/prousj/programas/pgsql/bin/pg_isready.exe" nil nil nil "-q"))
                  )
