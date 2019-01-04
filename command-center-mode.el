@@ -126,34 +126,30 @@
     )
   )
 
+(defun command-center-send-enter ()
+  "Send enter to process."
+  (interactive)
+  (let ((command-index (command-center-get-command-index)))
+    (if (and (>= command-index 0) (< command-index (length command-center-commands)))
+        (let ((name (car (nth command-index command-center-commands))))
+          (when (get-process name)
+              (progn
+                (message (concat "sending enter " name))
+                (process-send-string name "\n")
+                )
+            )
+          )
+      )
+    )
+  )
+
 (if command-center-map
     nil
   (setq command-center-map (make-sparse-keymap))
   (define-key command-center-map [?g] 'command-center-refresh-buffer)
   (define-key command-center-map [?r] 'command-center-run-command)
+  (define-key command-center-map [?e] 'command-center-send-enter)
   )
-
-(if command-center-commands
-    nil
-  (setq command-center-commands
-        '(
-          ("gent_token" . (lambda () (start-process "gent_token" "*gent_token*" "C:/Program Files/Git/bin/sh" "c:/Users/prousj/Documents/c++/gent_token/run.sh")))
-          )
-        )
-)
-
-(if command-center-services
-    nil
-  (setq command-center-services
-        '((:name "postgres"
-                 :run (lambda () (start-process "postgres" "*psql*" "c:/Users/prousj/programas/pgsql/bin/pg_ctl.exe" "start" "-D" "c:/Users/prousj/Documents/psql/data/" "-l" "c:/Users/prousj/Documents/psql/archivo_de_registro"))
-                 :stop (lambda () (start-process "postgres" "*psql*" "c:/Users/prousj/programas/pgsql/bin/pg_ctl.exe" "stop" "-D" "c:/Users/prousj/Documents/psql/data/"))
-                 :status (lambda () (call-process "c:/Users/prousj/programas/pgsql/bin/pg_isready.exe" nil nil nil "-q"))
-                 )
-          )
-        )
-  )
-
 
 (defun command-center ()
   "Start command center mode."
