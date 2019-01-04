@@ -15,9 +15,34 @@
   "Services for command center major mode."
  )
 
+(defface command-center-heading
+  '((((class color) (background light)) :foreground "DarkGoldenrod4" :weight bold)
+    (((class color) (background  dark)) :foreground "LightGoldenrod2" :weight bold))
+  "Face for section headings."
+  :group 'command-center-faces)
+
+(defface command-center-up
+  '((((class color) (background light)) :foreground "green3" :weight bold)
+    (((class color) (background  dark)) :foreground "green3" :weight bold))
+  "Face for section headings."
+  :group 'command-center-faces)
+
+(defface command-center-down
+  '((((class color) (background light)) :foreground "firebrick3" :weight bold)
+    (((class color) (background  dark)) :foreground "firebrick3" :weight bold))
+  "Face for section headings."
+  :group 'command-center-faces)
+
+
 (defun command-center-insert-command (command)
   "Insert the COMMAND."
-  (insert command)
+  (if (get-process command)
+      (progn
+        (insert (concat command))
+        (insert (propertize " running\n" 'face 'command-center-up))
+        )
+    (insert (concat command "\n"))
+    )
   )
 
 (defun command-center-service-isup (service)
@@ -32,8 +57,8 @@
   "Insert the SERVICE."
   (insert (plist-get service :name))
   (if (command-center-service-isup service)
-      (insert " up\n")
-    (insert " down\n"))
+      (insert (propertize " up\n" 'face 'command-center-up))
+    (insert (propertize " down\n" 'face 'command-center-down)))
   )
 
 (defun command-center-refresh-buffer ()
@@ -41,9 +66,13 @@
   (interactive)
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (insert "Commands\n")
+    (let ((commands-heading "Commands\n"))
+      (insert (propertize commands-heading 'face 'command-center-heading))
+      )
     (mapc 'command-center-insert-command (mapcar 'car command-center-commands))
-    (insert "Services\n")
+    (let ((services-heading "Services\n"))
+      (insert (propertize services-heading 'face 'command-center-heading))
+      )
     (mapc 'command-center-insert-service command-center-services)
     )
   )
@@ -65,8 +94,16 @@
     (let ((command-index (command-center-get-command-index)))
       (if (and (>= command-index 0) (< command-index (length command-center-commands)))
           (let ((name (car (nth command-index command-center-commands))))
-            (message (concat "running " name))
-            (funcall (cdr (assoc name command-center-commands)))
+            (if (get-process name)
+                (progn
+                  (message (concat "killing " name))
+                  (delete-process name)
+                  )
+              (progn
+                (message (concat "running " name))
+                (funcall (cdr (assoc name command-center-commands)))
+                )
+              )
             )
         )
       )
@@ -99,8 +136,8 @@
 (if command-center-commands
     nil
   (setq command-center-commands
-        '(("start-postgres\n" . (lambda () (start-process "postgres" "*psql*" "c:/Users/prousj/programas/pgsql/bin/pg_ctl.exe" "start" "-D" "c:/Users/prousj/Documents/psql/data/" "-l" "c:/Users/prousj/Documents/psql/archivo_de_registro")))
-          ("stop-postgres\n" . (lambda () (start-process "postgres" "*psql*" "c:/Users/prousj/programas/pgsql/bin/pg_ctl.exe" "stop" "-D" "c:/Users/prousj/Documents/psql/data/")))
+        '(
+          ("gent_token" . (lambda () (start-process "gent_token" "*gent_token*" "C:/Program Files/Git/bin/sh" "c:/Users/prousj/Documents/c++/gent_token/run.sh")))
           )
         )
 )
